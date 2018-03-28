@@ -169,7 +169,7 @@ This can also be done more succinctly using the predefined method
 val x = t.get
 ```
 
-What makes the `Try` type interesting, is that provides `map` and
+What makes the `Try` type interesting, is that it provides `map` and
 `flatMap` combinators that allow us to continue to work with the
 result value of the computation (in the successful case) in a *monadic
 fashion*:
@@ -403,7 +403,7 @@ object Parser {
 
 The implementation of the parser returned by `regex` should take
 advantage of Scala's regular expression library to do the actual
-matching on the input sequence.
+matching of `r` against the input sequence.
 
 In Scala, we can use the notation `s.r` to build a `Regex` object from
 a string `s` that describes the regular expression. For instance, we
@@ -429,14 +429,15 @@ be quite costly in practice. For instance, consider the parser
 ```
 
 Should this parser succeed on the input sequence `"aa"`? Intuitively,
-the answer is "yes" because the second subparser of the `orElse`
+the answer is "yes" because the second subparser of `orElse`
 accepts this sequence. However, the problem is that the `'a'` portion
 of the first subparser matches the first character of `"aa"`. Thus,
 when the first subparser fails on parsing the second `'a'` of the
 input, it has already consumed the first `'a'`. To be able to accept
 the input with the second subparser, we need to backtrack to the
 beginning of the input sequence and then retry. If we have many
-`orElse` combinations, this may lead to an exponential running time.
+`orElse` combinations, this may lead to a running time that is
+exponential in the size of the parser expression.
 
 Of course, we can implement our parsers more carefully. For instance,
 the above parser can be rewritten as
@@ -451,9 +452,9 @@ we want to build complex parsers compositionally from simpler building
 blocks.
 
 To solve this issue, we make a design choice and let `orElse` commit
-to the first subparser as soon as that subparser has consumed at least
+to the left subparser as soon as that subparser has consumed at least
 one input character. If the committed subparser fails, the `orElse`
-parser should itself fail without trying the second subparser. In
+parser should itself fail without trying its right subparser. In
 particular, the following should hold:
 
 ```scala
@@ -504,11 +505,11 @@ subparser to parse the remaining input, producing the final result of
 type `B`. If `pa` or `f(a)` fail then so does `pa.flatMap(f)`.
 
 That is, you can think of `flatMap` as a marriage between `andThen` and
-`map` where the second subparser is computed from the result of the
-first subparser.
+`map` where the right subparser is computed from the result of the
+left subparser.
 
-Here is how we can use `flatMap` to implement a parser for the context-sensitive
-language that we described above:
+Here is how we can use `flatMap` to implement a parser for the
+context-sensitive language that we described above:
 
 ```scala
 (digit flatMap (repeat(_)('a'))).parse("3aaa").get === List('a', 'a', 'a')
