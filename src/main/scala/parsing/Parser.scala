@@ -13,12 +13,12 @@ object Location {
 
 private[parsing] sealed trait ParseState[+A]
 
-trait Parser[+A] {
-  private[parsing] def apply(loc: Location): ParseState[A]
+trait Parser[A] {
+  protected def apply(loc: Location): ParseState[A]
 
   def parse(loc: Location): Try[A] = ???
   
-  def orElse[A1 >: A](p: Parser[A1]): Parser[A1] = ???
+  def orElse[A](p: Parser[A]): Parser[A] = ???
 
   def andThen[B](p: Parser[B]): Parser[(A, B)] = 
     for {
