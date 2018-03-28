@@ -7,8 +7,8 @@ class ParserSpec extends FlatSpec {
 
   import parsing.Parser._
 
-  /* some ideas for unit tests 
-  assert('a'.parse('a'.toString).get === 'a')
+  /* some ideas for unit tests */
+  assert('a'.parse('a').get === 'a')
   
   assert(('a' orElse 'b').parse('a').get === 'a')
 
@@ -25,5 +25,5 @@ class ParserSpec extends FlatSpec {
   assert((digit flatMap (repeatN(_)('a'))).parse("3aaa").get === List('a', 'a', 'a'))
 
   assert((attempt('a' andThen 'a') orElse ('a' andThen 'b')).parse("ab").get === ('a', 'b'))
-  */
+  
 }
