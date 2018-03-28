@@ -2,18 +2,27 @@
 
 ## Object-Functional Design
 
-When you design a software component, it is helpful to start
-your design by considering the interface of the component with its
-environment (i.e. other components) before designing the internal
-representation and implementation details of the component. That is,
-you should first think about what objects and methods the component
-should provide, what are the type signatures of these methods, what
-properties should the interactions between objects and their methods
-satisfy, which aspects of the internal state of the component should
-be observable by the environment - if any, etc. These considerations
-put constraints on the possible implementations of the component that
-inform your design process down the road and help you catch design
-flaws early on.
+When you design a software component, it is helpful to start your
+design by considering the interface of the component with its
+environment (i.e. other components) before designing the component's
+internal representation and implementation details. That is, you
+should first answer questions such as
+
+* What objects and methods the component should provide?
+
+* What are the type signatures of these methods?
+
+* What properties should the interactions between objects and their
+methods satisfy?
+
+* Which aspects of the internal state of the component should
+be observable by the environment - if any?
+
+* ...
+
+These considerations put constraints on the possible implementations
+of the component that inform your design process down the road and
+help you catch design flaws early on.
 
 In the context of object-functional design where objects have no
 observable state, we can often think of a software component as an
@@ -21,14 +30,15 @@ observable state, we can often think of a software component as an
 with operations that satisfy certain algebraic laws. We have already
 discussed monoids as one example of such an algebra. Identifying the
 algebra behind a specific programming problem requires some thought
-and practice. However, this effort is usually a good investment
+and practice. However, this effort is usually a good time investment
 because a principled design approach tends to yield cleaner code that
-is easier to maintain and extend compared to an ad hoc design.
+is easier to generalize, extend, and maintain compared to code
+obtained by an ad hoc design process.
 
 We will practice object-functional design in a mini project whose goal
 is to implement a parsing library. The purpose of today's class is to
 brain storm about the basic design of such a library and to set some
-"sign posts" for your implementation of the project.
+"sign posts" for your implementation.
 
 ## Designing a Parser Combinator Library
 
@@ -45,15 +55,15 @@ combinator* library that allows us to build complex parsers by
 combining simpler subparsers using certain composition operations
 defined on them.
 
-Ultimately, we want to be able to use this library to build parsers
-for parsing arbitrarily complex languages such HTML or even
-Scala. Though, for the purpose of designing the interface of our
-library, we will restrict ourselves to fairly simple parsing tasks in
-the following.
+Ultimately, we want to be able to use this library to build simple
+parser implementations for parsing arbitrarily complex languages such
+as HTML or even Scala. For the purpose of designing the interface of
+our library, we will restrict ourselves to fairly simple parsing tasks
+in the following.
 
 ### Basics
 
-We start with the simplest parsing task we can possibly imagine:
+We start with the simplest parsing task one can possibly imagine:
 parsing a single character `c`. Thus, let us define a combinator that
 given `c`, returns a parser that accepts only the input sequence
 consisting of the single character `c`:
@@ -66,8 +76,8 @@ The type `Parser[A]` stands for a parser that provides functionality
 for parsing the input character sequence and producing a result value
 of type `A` if parsing succeeds. The type `A` could e.g. be the type
 of an abstract syntax tree constructed from the input character
-sequence. For `char(c)` the result of a successful parse is simply `c`
-itself.
+sequence. For `char(c)`, the result of a successful parse is simply
+`c` itself.
 
 In general, we can thus think of `Parser[A]` as implementing a
 function from input character sequences to values of type `A`. The
@@ -91,8 +101,8 @@ should start its parse within that input sequence.
 It will be your responsibility to design the representation of the
 type `Location` for different input sources. In the following we keep
 `Location` abstract and only assume that we have an implicit
-conversion from `String` and `Char` to `Location` that we can use to
-parse a `String` or `Char`, respectively:
+conversion from `String` and `Char` to a `Location` representing the
+start position of the `String` respectively `Char` to be parsed:
 
 ```scala
 trait Location
@@ -117,13 +127,75 @@ char('a').parse("b")
 What should happen in this case? We could simply throw an exception
 inside `parse` indicating the parse error together with an appropriate
 error message. However, exceptions are a heavyweight mechanism and
-we'd like to keep our design free of side effects.
+we'd like to keep our library design free of side effects.
 
-TODO: add discussion of `Try`
+Scala provides the type `Try[A]` that is quite helpful in this kind of
+situation. This type allows us to perform a computation that
+potentially throw exceptions, while containing either the result value
+of the computation or the exception being thrown within the `Try`. 
+
+Let's take a look at an example:
+
+```scala
+val t: Try[Int] = Try(1 / 0)
+t: Try[Int]
+```
+Note that `1 / 0` throws an `ArithmeticException` due to the division
+by 0. However, this exception is caught by the `Try` constructor and
+contained with the value `t`.
+
+The `Try` type is implemented by two case classes:
+
+* `Success`: which holds the result value of the computation if no
+  exception has been thrown, and
+  
+* `Failure`: which holds the exception otherwise.
+
+We can for instance use this to inspect the outcome of the computation
+and extract the value or throw the exception if we want to continue
+the computation:
+
+```scala
+val x: Int = t match {
+  case Success(x) => x
+  case Failure(ex) => throw x // Alternatively, return an Int to recover
+}
+```
+
+This can also be done more succinctly using the predefined method
+`get`:
+
+```scala
+val x = t.get
+```
+
+What makes the `Try` type interesting, is that provides `map` and
+`flatMap` combinators that allow us to continue to work with the
+result value of the computation (in the successful case) in a *monadic
+fashion*:
+
+```scala
+for {
+  x <- t
+  y <- x + 1
+  z <- y * 3
+} yield z
+```
+
+The result of this `for` expression is `Success((x + 1) * 3)` if `t`
+is `Success(x)` and `Failure(ex)` if `t` is `Failure(ex)`. If
+at any point an exception is thrown within such a `for` expression
+operating on a `Try`, it is simply captured and propagated to the
+final resulting `Try` value. This way, we can work with exceptions
+without having to deal with the side effects of unstructured control
+flow when an exception is thrown. Instead, exceptions are simply
+propagated along the normal control flow and can be dealt with at the
+point we deem it to be necessary.
 
 We can thus modify the signature of `parse` to return a `Try[A]`
-instead of an `A` to indicate that parsing may fail with an exception
-that we simply wrap in the return value:
+instead of an `A` to indicate that parsing may fail. Instead of
+throwing the exception explicitly within the library, we simply wrap
+it in a `Try` value at the end of the parse and return that to the client:
 
 ```scala
 trait Parser[A] {
@@ -131,13 +203,14 @@ trait Parser[A] {
 }
 ```
 
-Now the client is free to either
+Upon calling `parse` the client is free to either
 
 1. throw the exception as a side-effect when calling `get` on the
 result of a failed `parse`, or
 
-1. continue working with the `Try[A]` in a side-effect free fashion
-using `for` expressions as in our discussion above.
+1. delay handling of the exception and continue working with the
+`Try[A]` in a side-effect free fashion using `for` expressions as in
+our discussion above.
 
 The following equation specifies our first algebraic law that we want
 to hold for the combinator `char` and all `Char` values `c`:
@@ -162,6 +235,7 @@ c.parse(c).get === c
 ```
 
 by making the call to `char` implicit.
+
 
 ### An Algebra of Combinators
 
@@ -198,26 +272,27 @@ Using repeated composition of parsers via `andThen` we can construct
 parsers that can parse input sequences of fixed length. What
 about sequences of unspecified length? A common scenario is that the
 input sequence to be parsed consists of a repeated pattern that can be
-parsed by the same subparser. Let's throw in a combinator for that:
+parsed by the same subparser. Let's throw in a combinator for that in
+our companion object:
 
 ```scala
-def repeat: Parser[List[A]]
+def repeat[A](p: Parser[A]): Parser[List[A]]
 ```
 
-Given a parser `pa: Parser[A]`, the parser `pa.repeat` applies `pa` as
+Given a parser `pa: Parser[A]`, the parser `repeat(a)` applies `pa` as
 many times as needed to parse the input sequence, producing the list
 of result values of the subparses if successful.
 
 For instance, we should have
 
 ```scala
-('a' andThen 'b').repeat.parse("abab") === List(('a', 'b'), ('a', 'b'))
+repeat('a' andThen 'b').parse("abab") === List(('a', 'b'), ('a', 'b'))
 ```
 
 Here is a more general law: for all `Int` values `n` and `Char` values `c`
 
 ```scala
-c.repeat.parse(fill(n)(c).toString).get === fill(n)(c)
+repeat(c).parse(fill(n)(c).toString).get === fill(n)(c)
 ```
 
 Let's also throw in a variant of `repeat` that succeeds if the pattern
@@ -225,14 +300,14 @@ accepted by the current parser repeats exactly `n` times for some
 given `n`:
 
 ```scala
-def repeat(n: Int): Parser[List[A]]
+def repeatN[A](n: Int)(p: Parser[A]): Parser[List[A]]
 ```
 
 The corresponding variant of our previous law for `repeat` is as
 follows: for all `n` and `c`
 
 ```scala
-c.repeat(n).parse(fill(n)(c).toString).get === fill(n)(c)
+repeatN(n)(c).parse(fill(n)(c).toString).get === fill(n)(c)
 ```
 
 So far, the parsers we have seen can only produce result values that
@@ -241,9 +316,9 @@ satisfactory. Suppose, e.g., that we want to write a parser that
 accepts a sequence of `c` characters and returns the length of the
 sequence as result. We could write a dedicated combinator for this
 task, but that combinator would be fairly specific. Instead, why not
-use the parser `char(c).repeat` and transform it in a way that it
-returns an `Int` instead of a `List[Char]`. I know you saw ithis coming,
-our old friend `map` is back:
+use the parser `repeat(char(c))` and transform it in a way that it
+returns an `Int` instead of a `List[Char]`? I know you saw this
+coming, our old friend `map` is back:
 
 ```scala
 trait Parser[A] {
@@ -261,13 +336,13 @@ Here is a law capturing the example parsing task of counting the
 number of `c` characters in an input sequence of `c`s:
 
 ```scala
-(c.repeat map (_.size)).parse(fill(n)(c).toString) === n
+(repeat(c) map (_.size)).parse(fill(n)(c).toString) === n
 ```
 
 and here is a more concrete test case:
 
 ```scala
-('c'.repeat map (_.size)).parse("ccc") === 3
+(repeat('c') map (_.size)).parse("ccc") === 3
 ```
 
 One important functionality that we are missing is to specify
@@ -284,7 +359,7 @@ trait Parser[A] {
 
 Given two parsers `pa1, pa2: Parser[A]` the parser `pa1 orElse pa2`
 first applies `pa1` and returns its result on success or else applies
-`pa2` on the *same* input sequence returning `pa2`'s result.
+`pa2` on the *same* input sequence as `pa1` returning `pa2`'s result.
 
 Here are two obvious laws for this combinator: for all `Char` values
 `c` and `d`:
@@ -296,14 +371,28 @@ Here are two obvious laws for this combinator: for all `Char` values
 
 ### Parsing Regular Expressions
 
-TODO: example
+Using the combinators we have designed so far, we can easily express
+parsers for regular languages. For instance, here is a parser that
+parses arbitrarily long sequences of digit characters, which we can
+describe by the regular expression `"[0-9]*"`, and then computes the
+represented integer value:
 
-Though, writing parsers for basic regular expressions this way is
-quite cumbersome and inefficient. Scala already comes with an
-efficient regular expression library, so we would like to take
-advantage of that. Let's add a factory method that takes a regular
-expression `r` and builds a parser that accepts inputs according to `r`
-and returns the matched string as result:
+```scala
+def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toInt)
+def digits: Parser[Int] = repeat(digit) map (_ reduce (_ * 10 + _))
+```
+
+Writing parsers for basic regular expressions in this way is a bit
+cumbersome. We could define additional combinators for common types of
+regular expressions to make this more pleasant, but ultimately
+handling regular expressions using our combinators will be fairly
+inefficient.
+
+Like most languages, Scala already comes with an efficient regular
+expression library, so we would like to take advantage of that
+functionality. Let's add a factory method that takes a regular
+expression `r` and builds a parser that accepts inputs according to
+`r` and returns the matched string as result:
 
 ```scala
 object Parser {
@@ -328,16 +417,77 @@ object Parser {
 }
 ```
 
+### Efficiency Considerations
+
+The `orElse` operator introduces nondeterminism into our parser
+logic. To implement this nondeterminism, we may need to backtrack on
+the input sequence, discarding a partial unsuccessful parse. This can
+be quite costly in practice. For instance, consider the parser
+
+```scala
+('a' andThen 'b') orElse ('a' andThen 'a')
+```
+
+Should this parser succeed on the input sequence `"aa"`? Intuitively,
+the answer is "yes" because the second subparser of the `orElse`
+accepts this sequence. However, the problem is that the `'a'` portion
+of the first subparser matches the first character of `"aa"`. Thus,
+when the first subparser fails on parsing the second `'a'` of the
+input, it has already consumed the first `'a'`. To be able to accept
+the input with the second subparser, we need to backtrack to the
+beginning of the input sequence and then retry. If we have many
+`orElse` combinations, this may lead to an exponential running time.
+
+Of course, we can implement our parsers more carefully. For instance,
+the above parser can be rewritten as
+
+```scala
+'a' andThen ('b' orElse 'a')
+```
+
+which avoids the backtracking. However, this approach may make the
+parser implementation harder to read and is generally not possible if
+we want to build complex parsers compositionally from simpler building
+blocks.
+
+To solve this issue, we make a design choice and let `orElse` commit
+to the first subparser as soon as that subparser has consumed at least
+one input character. If the committed subparser fails, the `orElse`
+parser should itself fail without trying the second subparser. In
+particular, the following should hold:
+
+```scala
+(('a' andThen 'b') orElse ('a' andThen 'a')).parse("aa").isFailure
+```
+
+Still, we want to be able to express parsers that can parse `"ab"` or
+`"aa"` using backtracking as described above. However, for efficiency
+reasons we don't want to make backtracking the default behavior of
+`orElse`. To control whether a parser is backtrackable, we add an
+additional combinator:
+
+```scala
+def attempt[A](p: Parser[A]): Parser[A]
+```
+
+The parser `attempt(p)` should behave like `p`, except that if `p`
+fails, its returned parse state is reset to an uncommitted state,
+indicating that it is backtrackable. In particular, we should have:
+
+```scala
+(attempt('a' andThen 'b') orElse ('a' andThen 'a')).parse("aa").get === ('a', 'a')
+```
+
 ### The Combinator to Rule all Combinators: `flatMap`
 
 Parsing regular languages (and more generally context-free languages)
 is fun, but what if we want to go beyond that? For instance, suppose
-we want to parse a context-sensitive language such as all character
-sequences of the form: *"a digit d, followed by a sequence of 'c's of
-length d"*. To implement a parser for such a language we need to be
-able to choose subparsers based on the intermediate results produced
-by other subparsers. This leads us to the final combinator that we add
-to our combinator algebra:
+we want to implement a parser for a context-sensitive language such as
+the one consisting of all character sequences of the form: *"a digit
+d, followed by a sequence of 'c's of length d"*. To implement such a
+parser, we need to be able to choose subparsers based on the
+intermediate results produced by other subparsers. This leads us to
+the final combinator that we add to our combinator algebra:
 
 ```scala
 trait Parser[A] {
@@ -346,15 +496,22 @@ trait Parser[A] {
 }
 ```
 
+Given a parser `pa: Parser[A]` and `f: A => Parser[B]`, the parser
+`pa.flatMap(f)` first applies `pa` to the input sequence producing a
+partial parse with intermediate result `a: A` if successful. Using `a`
+it then constructs the parser `f(a): Parser[B]` and uses this
+subparser to parse the remaining input, producing the final result of
+type `B`. If `pa` or `f(a)` fail then so does `pa.flatMap(f)`.
+
 That is, you can think of `flatMap` as a marriage between `andThen` and
 `map` where the second subparser is computed from the result of the
 first subparser.
 
-Here is how we can use `flatMap` to describe a parser for the context-sensitive
+Here is how we can use `flatMap` to implement a parser for the context-sensitive
 language that we described above:
 
 ```scala
-(digit flatMap ('a'.repeat(_))).parse("3aaa").get === List('a', 'a', 'a')
+(digit flatMap (repeat(_)('a'))).parse("3aaa").get === List('a', 'a', 'a')
 ```
 
 Many of the combinators that we have discussed so far can be
@@ -380,43 +537,160 @@ def andThen[B](pb: Parser[B]): Parser[(A, B)] =
 
 Feel free to add additional combinators and factory methods as you see
 fit. Though, try to reuse existing combinators such as `flatMap` as
-much as possible.
+much as possible. E.g. it is a good exercise to think about how `map`
+and `orElse` can be implemented with `flatMap` to better understand
+how `flatMap` can be used (even if you decide to implement these
+combinators more directly in the end).
+
 
 ### Parse State
 
+Let us now move on to some design considerations related to the
+internal implementation of our library.
 
+Clearly, in order to implement combinators such as `flatMap` and
+`orElse`, we need to keep track of some information about the state of
+the parser in addition to information about the result value and
+whether the parse has been successful. For instance, `flatMap` needs
+to know the location in the input sequence that has been reached after
+the first subparser has completed and control is handed over to the
+second subparser. Similarly, `orElse` needs to know whether the first
+subparser has committed to the input sequence after completing its
+parse in order to decide whether it should backtrack and invoke the
+second subparser.
 
-```scala
-private[parsing] sealed trait ParseState[+A]{ val loc: Location }
-```
+How shall we keep track of the parse state? We want to maintain a
+clean functional design that does not rely on mutable
+state. Otherwise, we might break the algebraic properties of our
+combinators. 
+
+The key insight is to think about a parser more generally as a
+function that takes a location in the input sequence and produces a
+parse state as a result. The resulting parse state captures 
+
+* whether the parser succeeded, 
+
+* the result value on success, 
+
+* what location the parser has reached after completing its parse,
+  etc.
+
+In particular, even upon a successful parse, the parser may only have
+consumed a prefix of the input sequence starting from the given
+location.
+
+The different parser combinators then thread the parse state from one
+subparser to the next. A parse state indicating a failed parse is
+simply propagated through subsequent subparsers, unless it is wrapped
+in an `attempt` parser that is handled by `orElse`.
+
+Let's conjure up a type `ParseState[A]` that represents the parse
+state of our parser and update `Parser` appropriately:
 
 ```scala
 trait Parser[A] {
-  private[parsing] def apply(loc: Location): ParseState[A]
+  protected def apply(loc: Location): ParseState[A]
   
   def parse(loc: Location): Try[A] = 
+    // run this parser using `apply` and check whether the final state
+    // indicates success and consummation of the entire input
     apply(loc) match { ... }
 
   def flatMap[B](f: A => Parser[B]): Parser[B] =
-    // provide implementation of Parse[B].apply that 
-    // takes care of all the plumbing
+    // Provide implementation of `apply` method that 
+    // takes care of the necessary plumbing for the logic of 
+    // the Parser[B] returned by flatMap.
     { loc => apply(loc) match {
         ...
       }
     }
+    
+  ...
 }
 ```
 
-### Efficiency Considerations
+Note that we have introduced an abstract method `apply` to `Parser`
+that implements the logic of each specific parser. It is the only
+abstract method of `Parser`. That is, combinators such as `flatMap`
+only need to implement the `apply` method for the new `Parser` object
+being returned by the combinator.
 
+The actual type for parse state could look like this:
 
+```scala 
+private[parsing] sealed trait ParseState[A]
+``` 
 
-```scala
-def attempt[A](p: Parser[A]): Parser[A]
-```
-
-```scala
-(attempt('a' andThen 'a') orElse ('a' andThen 'b')).parse("ab").get === ('a', 'b')
-```
+You will need to keep track of certain information in the parse state
+and it is your job to design the details of the implementation. For
+instance, you could have separate derived case classes for
+representing the parse states of successful and failing parses.
 
 ### Error Reporting
+
+One important aspect of the design of our parser library that we
+haven't talked about yet is error reporting.
+
+We want to extend our library with the capability of tagging parsers
+with informative error messages that explain the parse error.
+
+For instance, suppose we implement a parser that parses Scala code and
+suppose we apply it to a syntactically incorrect `val` declaration like this:
+
+```scala
+val 0 = 1
+```
+
+The parser should produce an exception indicating the position in the
+input sequence where the parse error occurred (e.g. line and column
+number etc.), together with a detailed error message that explains the
+context of the error.
+
+For instance, in the above example the parser will fail when it reads
+the character `0` as it expects the beginning of an identifier, which
+must start with a letter or underscore character. Thus, a low level
+error message that the parser could produce at this point could be
+
+```"Found '0' but expected letter or underscore"```
+
+However, this information alone is not very helpful. The parser could
+provide additional information about the context where the error
+occurred. In this case, the subparser that parses first character of
+the identifier could be part of a composite parser for parsing an
+identifier. This composite parser could augment the information provided
+by the subparser with the information
+
+```" while parsing identifier"```
+
+Similarly, the parser for the identifier could be again a subparser of
+another composite parser for `val` declarations. The latter could
+further augment the error message by adding
+
+```" in val declaration"```.
+
+So the final error message produced by our parser could look like
+this:
+
+```Error (1,4): Found '0' but expected letter or underscore while parsing identifier in val declaration```
+
+To support this kind of error reporting functionality we add two more
+combinators to our library. The first one is
+
+```
+def label[A](msg: String)(p: Parser[A]): Parser[A]
+```
+
+The parser `label(msg)(p)` should behave like `p`. However, if `p`
+fails, then the error message contained in the error state produced by
+`p` should be replaced by `msg`.
+
+In addition, we add a second combinator that enables us to *tag* the
+error message of a subparser with additional information:
+
+```
+def tag[A](msg: String)(p: Parser[A]): Parser[A]
+```
+
+The parser `tag(msg)(p)` should again behave like `p`. However, if `p`
+fails, then the error message in its final error state should be
+extended with `msg`.
