@@ -130,10 +130,11 @@ inside `parse` indicating the parse error together with an appropriate
 error message. However, exceptions are a heavyweight mechanism and
 we'd also like to keep our library design free of side effects.
 
-Scala provides the type `Try[A]` that is quite helpful in this kind of
-situation. This type allows us to perform a computation that
-potentially throw exceptions, while containing either the result value
-of the computation or the exception being thrown within the `Try`. 
+Scala provides the type `Try[A]`, which is quite helpful in this kind
+of situation. This type implements a container that allows us to
+perform a computation that potentially throws exceptions, while
+containing either the result value of the computation or the exception
+being thrown in the container.
 
 Let's take a look at an example:
 
@@ -143,7 +144,7 @@ t: Try[Int]
 ```
 Note that `1 / 0` throws an `ArithmeticException` due to the division
 by 0. However, this exception is caught by the `Try` constructor and
-contained with the value `t`.
+contained with the value container `t`.
 
 The `Try` type is implemented by two case classes:
 
@@ -152,9 +153,9 @@ The `Try` type is implemented by two case classes:
   
 * `Failure`: which holds the exception otherwise.
 
-We can for instance use this to inspect the outcome of the computation
-and extract the value or throw the exception if we want to continue
-the computation:
+We can for instance now use pattern matching to inspect the outcome of
+the computation and extract the value or "release" the exception from
+the `Try` container by throwing it:
 
 ```scala
 val x: Int = t match {
@@ -163,8 +164,8 @@ val x: Int = t match {
 }
 ```
 
-This can also be done more succinctly using the predefined method
-`get`:
+The same behavior as the above code can also be achieved more succinctly
+by using the predefined method `get`:
 
 ```scala
 val x = t.get
@@ -176,20 +177,24 @@ result value of the computation (in the successful case) in a *monadic
 fashion*:
 
 ```scala
-for {
+val t1: Try[Int] = for {
   x <- t
 } yield (x + 1) * 3
 ```
 
-The result of this `for` expression is `Success((x + 1) * 3)` if `t`
-is `Success(x)` and `Failure(ex)` if `t` is `Failure(ex)`. If
-at any point an exception is thrown within such a `for` expression
-operating on a `Try`, it is simply captured and propagated to the
-final resulting `Try` value. This way, we can work with exceptions
-without having to deal with the side effects of unstructured control
-flow when an exception is thrown. Instead, exceptions are simply
-propagated along the normal control flow and can be dealt with at the
-point we deem it to be necessary.
+The result `t1` of this `for` expression is `Success((x + 1) * 3)` if `t`
+is `Success(x)` and `Failure(ex)` if `t` is `Failure(ex)`. If at any
+point an exception is thrown within such a `for` expression operating
+on a `Try` container, the exception is simply caught within the
+container and propagated to the final resulting `Try` value. This way,
+we can work with exceptions without having to deal with the side
+effects of unstructured control flow when an exception is
+thrown. Instead, exceptions are simply propagated along the normal
+control flow of the program and can be dealt with at the point we deem
+it to be necessary. The `Try` type is thus useful when we want to
+write side-effect free code that needs to inter-operate with code that
+can throw exceptions. By using `Try` we can avoid cluttering our code
+with `try/catch` blocks.
 
 We modify the signature of `parse` to return a `Try[A]` instead of an
 `A` to indicate that parsing may fail. Instead of throwing the
@@ -207,9 +212,9 @@ Upon calling `parse` the client is free to either
 1. throw the exception as a side-effect when calling `get` on the
 result of a failed `parse`, or
 
-1. delay handling of the exception and continue working with the
-`Try[A]` in a side-effect free fashion using `for` expressions as in
-our discussion above.
+1. delay the handling of the parse error and continue working with the
+`Try[A]` in a side-effect free fashion (using `for` expressions as in
+our discussion above).
 
 The following equation specifies our first algebraic law that we want
 to hold for the combinator `char` and all `Char` values `c`:
