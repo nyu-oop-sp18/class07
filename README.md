@@ -640,7 +640,7 @@ trait Parser[A] {
 ```
 
 Note that we have introduced an abstract method `apply` to `Parser`
-that implements the logic of each specific parser. It is the only
+that will implement the logic of each specific parser. It is the only
 abstract method of `Parser`. That is, combinators such as `flatMap`
 only need to implement the `apply` method for the new `Parser` object
 being returned by the combinator.
