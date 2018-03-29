@@ -295,6 +295,10 @@ list: for all `Int` values `n` and `Char` values `c`
 repeat(c).parse(fill(n)(c).toString).get === fill(n)(c)
 ```
 
+Note that `fill(n)(c)` creates a list of length `n` that contains `n`
+copies of character `c`, which we then concatenate to the `String` to
+be parsed.
+
 Let's also throw in a variant of `repeat` that succeeds if the pattern
 accepted by the current parser repeats exactly `n` times for some
 given `n`:
@@ -373,9 +377,9 @@ Here are two obvious laws for this combinator: for all `Char` values
 
 Using the combinators we have designed so far, we can easily express
 parsers for regular languages. For instance, here is a parser that
-parses arbitrarily long sequences of digit characters, which we can
-describe by the regular expression `"[0-9]*"`, and then computes the
-represented integer value:
+parses arbitrarily long sequences of digit characters (as
+described by the regular expression `"[0-9]*"`). The parser then computes the
+`Int` value encoded in the decimal representation:
 
 ```scala
 def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toString.toInt)
@@ -384,25 +388,28 @@ def digits: Parser[Int] = repeat(digit) map (ds => ds reduce (_ * 10 + _))
 
 It's instructive to go through these two definitions step by step. For
 `digit`, we first create a `Seq[Char]` containing the sequence of
-character values from `'0'` to `'9'`. From this, we first produce a
-`Parser[Char]` that accepts either of these 10 possible digit
-characters and returns the corresponding character upon success. We do
-this by reducing the `Seq[Char]` that consecutively maps each `Char`
-in the sequence to a `Parser[Char]` via an implicit conversion and
-then combines it with its predecessor via the `orElse` combinator. Now
-we only need to convert the `Parser[Char]` into a `Parser[Int]` by
-taking the result `Char` of the first and converting it into the
-represented `Int` value. We do this by converting the `Char` first to
-a `String` and then an `Int`. If we call `toInt` directly on the
-`Char` value, we get back its ASCII code, which is not what we want.
+character values from `'0'` to `'9'`. From this `Seq[Char]`, we then
+produce a `Parser[Char]` that accepts either of these 10 possible
+digit characters and returns the corresponding character upon
+success. We do this by reducing the `Seq[Char]` using a function that
+consecutively maps each `Char` in the sequence to a `Parser[Char]`
+(via an implicit conversion) and then combines it with its predecessor
+via the `orElse` combinator. Now we only need to convert the
+`Parser[Char]` into a `Parser[Int]` using the `map` combinator. The
+function applied in the `map` takes the result `Char` produced by the
+`Parser[Char]` and converts it into the represented `Int` value. We do this
+by converting the `Char` first to a `String` and then to an `Int`. If we
+call `toInt` directly on the `Char` value, we get back its ASCII code,
+which is not what we want.
 
 The definition of `digits` is similar. The parser `repeat(digit)`
 accepts sequences of digit characters and produces a `List[Int]`
 corresponding to the `Int` values represented by each digit in the
-parsed sequence. By using the `map` combinator the resulting parser is
-then converted to a `Parser[Int]` that takes the `List[Int]`, `ds`,
-produced by the first parser, and converts it into a single `Int`
-value according to its decimal representation encoded in `ds`.
+parsed sequence. By using the `map` combinator, the resulting parser
+is of type `Parser[List[Int]` which we convert to a `Parser[Int]` using
+`map`. The function applied in the `map` takes the `List[Int]`, `ds`,
+produced by the `Parser[List[Int]]`, and converts it into a single
+`Int` value according to its decimal representation encoded in `ds`.
 
 Writing parsers for basic regular expressions in this way is a bit
 cumbersome. We could define additional combinators for common types of
