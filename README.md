@@ -318,9 +318,9 @@ So far, the parsers we have seen can only produce result values that
 are tuples or lists built from `Char` values. That's not very
 satisfactory. Suppose, e.g., that we want to write a parser that
 accepts a sequence of `c` characters and returns the length of the
-sequence as result. We could write a dedicated combinator for this
-task, but that combinator would be fairly specific. Instead, why not
-use the parser `repeat(char(c))` and transform it in a way that it
+accepted sequence as result. We could write a dedicated combinator for
+this task, but that combinator would be fairly specific. Instead, why
+not use the parser `repeat(char(c))` and transform it in a way that it
 returns an `Int` instead of a `List[Char]`? I know you saw this
 coming, our old friend `map` is back:
 
@@ -362,8 +362,9 @@ trait Parser[A] {
 ```
 
 Given two parsers `pa1, pa2: Parser[A]` the parser `pa1 orElse pa2`
-first applies `pa1` and returns its result on success or else applies
-`pa2` on the *same* input sequence as `pa1` returning `pa2`'s result.
+first applies `pa1` and returns its result on success. If `pa1`
+failrs, the composite parser applies `pa2` on the *same* input
+sequence as `pa1` and returns `pa2`'s result.
 
 Here are two obvious laws for this combinator: for all `Char` values
 `c` and `d`:
@@ -377,9 +378,9 @@ Here are two obvious laws for this combinator: for all `Char` values
 
 Using the combinators we have designed so far, we can easily express
 parsers for regular languages. For instance, here is a parser that
-parses arbitrarily long sequences of digit characters (as
-described by the regular expression `"[0-9]*"`). The parser then computes the
-`Int` value encoded in the decimal representation:
+parses arbitrarily long sequences of digit characters (as described by
+the regular expression `"[0-9]*"`). The parser then computes the `Int`
+value encoded in the decimal representation:
 
 ```scala
 def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toString.toInt)
@@ -458,15 +459,14 @@ be quite costly in practice. For instance, consider the parser
 ```
 
 Should this parser succeed on the input sequence `"aa"`? Intuitively,
-the answer is "yes" because the second subparser of `orElse`
-accepts this sequence. However, the problem is that the `'a'` portion
-of the first subparser matches the first character of `"aa"`. Thus,
-when the first subparser fails on parsing the second `'a'` of the
-input, it has already consumed the first `'a'`. To be able to accept
-the input with the second subparser, we need to backtrack to the
-beginning of the input sequence and then retry. If we have many
-`orElse` combinations, this may lead to a running time that is
-exponential in the size of the parser expression.
+the answer is "yes" because the second subparser of `orElse` accepts
+this sequence. However, the problem is that the `'a'` portion of the
+first subparser matches the first character of `"aa"`. Thus, when the
+first subparser fails on parsing the second `'a'` of the input, it has
+already consumed the first `'a'`. To be able to accept the input with
+the second subparser, we need to backtrack to the beginning of the
+input sequence and then retry. If we have many `orElse` combinations,
+this may lead to an unacceptable running time of the parser.
 
 Of course, we can implement our parsers more carefully. For instance,
 the above parser can be rewritten as
