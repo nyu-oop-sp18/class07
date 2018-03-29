@@ -406,7 +406,7 @@ The definition of `digits` is similar. The parser `repeat(digit)`
 accepts sequences of digit characters and produces a `List[Int]`
 corresponding to the `Int` values represented by each digit in the
 parsed sequence. The resulting parser is thus of type
-`Parser[List[Int]` and we convert to a `Parser[Int]` using `map`. The
+`Parser[List[Int]]` and we convert to a `Parser[Int]` using `map`. The
 function applied in the `map` takes the `List[Int]`, `ds`, produced by
 the intermediate `Parser[List[Int]]`, and converts it into a single
 `Int` value according to its decimal representation encoded in `ds`.
