@@ -128,7 +128,7 @@ char('a').parse("b")
 What should happen in this case? We could simply throw an exception
 inside `parse` indicating the parse error together with an appropriate
 error message. However, exceptions are a heavyweight mechanism and
-we'd like to keep our library design free of side effects.
+we'd also like to keep our library design free of side effects.
 
 Scala provides the type `Try[A]` that is quite helpful in this kind of
 situation. This type allows us to perform a computation that
