@@ -311,7 +311,7 @@ repeatN(n)(c).parse(fill(n)(c).toString).get === fill(n)(c)
 ```
 
 So far, the parsers we have seen can only produce result values that
-are tuples or lists build from `Char` values. That's not very
+are tuples or lists built from `Char` values. That's not very
 satisfactory. Suppose, e.g., that we want to write a parser that
 accepts a sequence of `c` characters and returns the length of the
 sequence as result. We could write a dedicated combinator for this
