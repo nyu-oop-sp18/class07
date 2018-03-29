@@ -535,7 +535,7 @@ type `B`. If `pa` or `f(a)` fail then so does `pa.flatMap(f)`.
 
 That is, you can think of `flatMap` as a marriage between `andThen` and
 `map` where the right subparser is computed from the result of the
-left subparser.
+left subparser using the function `f`.
 
 Here is how we can use `flatMap` to implement a parser for the
 context-sensitive language that we described above:
