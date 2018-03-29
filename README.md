@@ -537,12 +537,13 @@ trait Parser[A] {
 }
 ```
 
-Given a parser `pa: Parser[A]` and `f: A => Parser[B]`, the parser
-`pa.flatMap(f)` first applies `pa` to the input sequence producing a
-partial parse with intermediate result `a: A` if successful. Using `a`
-it then constructs the parser `f(a): Parser[B]` and uses this
-subparser to parse the remaining input, producing the final result of
-type `B`. If `pa` or `f(a)` fail then so does `pa.flatMap(f)`.
+Given a parser `pa: Parser[A]` and a function `f: A => Parser[B]`, the
+parser `pa.flatMap(f)` first applies `pa` to the input sequence
+producing a partial parse with intermediate result `a: A` if
+successful. Using `a` it then constructs the parser `f(a): Parser[B]`
+and uses this subparser to parse the remaining input, producing the
+final result of type `B`. If `pa` or `f(a)` fail then so does
+`pa.flatMap(f)`.
 
 That is, you can think of `flatMap` as a marriage between `andThen` and
 `map` where the right subparser is computed from the result of the
