@@ -177,9 +177,7 @@ fashion*:
 ```scala
 for {
   x <- t
-  y <- x + 1
-  z <- y * 3
-} yield z
+} yield (x + 1) * 3
 ```
 
 The result of this `for` expression is `Success((x + 1) * 3)` if `t`
@@ -192,10 +190,10 @@ flow when an exception is thrown. Instead, exceptions are simply
 propagated along the normal control flow and can be dealt with at the
 point we deem it to be necessary.
 
-We can thus modify the signature of `parse` to return a `Try[A]`
-instead of an `A` to indicate that parsing may fail. Instead of
-throwing the exception explicitly within the library, we simply wrap
-it in a `Try` value at the end of the parse and return that to the client:
+We modify the signature of `parse` to return a `Try[A]` instead of an
+`A` to indicate that parsing may fail. Instead of throwing the
+exception explicitly within the library, we simply wrap it in a `Try`
+value at the end of the parse and return that to the client:
 
 ```scala
 trait Parser[A] {
@@ -289,7 +287,9 @@ For instance, we should have
 repeat('a' andThen 'b').parse("abab") === List(('a', 'b'), ('a', 'b'))
 ```
 
-Here is a more general law: for all `Int` values `n` and `Char` values `c`
+Here is a more general law which states that parsing a list of `c`
+characters of length `n` using `repeat(c)` gives us back the same
+list: for all `Int` values `n` and `Char` values `c`
 
 ```scala
 repeat(c).parse(fill(n)(c).toString).get === fill(n)(c)
@@ -330,7 +330,7 @@ trait Parser[A] {
 Given a parser `pa: Parser[A]` and a function `f: A => B`, the parser
 `pa.map(f)` applies `pa` to parse the input sequence producing `a: A`
 as an intermediate result value if successful, and then computes `f(a):
-B` as the final result of the parse.
+B` as the final result value of the parse.
 
 Here is a law capturing the example parsing task of counting the
 number of `c` characters in an input sequence of `c`s:
@@ -345,9 +345,9 @@ and here is a more concrete test case:
 (repeat('c') map (_.size)).parse("ccc") === 3
 ```
 
-One important functionality that we are missing is to specify
+One important functionality that we are still missing is to specify
 alternatives between different subparsers. E.g., what if we want to
-parse input sequences that consists of a `c` or a `d` character?
+parse input sequences that consist of a `c` or a `d` character?
 Clearly we need another combinator for that:
 
 ```scala
@@ -378,9 +378,31 @@ describe by the regular expression `"[0-9]*"`, and then computes the
 represented integer value:
 
 ```scala
-def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toInt)
-def digits: Parser[Int] = repeat(digit) map (_ reduce (_ * 10 + _))
+def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toString.toInt)
+def digits: Parser[Int] = repeat(digit) map (ds => ds reduce (_ * 10 + _))
 ```
+
+It's instructive to go through these two definitions step by step. For
+`digit`, we first create a `Seq[Char]` containing the sequence of
+character values from `'0'` to `'9'`. From this, we first produce a
+`Parser[Char]` that accepts either of these 10 possible digit
+characters and returns the corresponding character upon success. We do
+this by reducing the `Seq[Char]` that consecutively maps each `Char`
+in the sequence to a `Parser[Char]` via an implicit conversion and
+then combines it with its predecessor via the `orElse` combinator. Now
+we only need to convert the `Parser[Char]` into a `Parser[Int]` by
+taking the result `Char` of the first and converting it into the
+represented `Int` value. We do this by converting the `Char` first to
+a `String` and then an `Int`. If we call `toInt` directly on the
+`Char` value, we get back its ASCII code, which is not what we want.
+
+The definition of `digits` is similar. The parser `repeat(digit)`
+accepts sequences of digit characters and produces a `List[Int]`
+corresponding to the `Int` values represented by each digit in the
+parsed sequence. By using the `map` combinator the resulting parser is
+then converted to a `Parser[Int]` that takes the `List[Int]`, `ds`,
+produced by the first parser, and converts it into a single `Int`
+value according to its decimal representation encoded in `ds`.
 
 Writing parsers for basic regular expressions in this way is a bit
 cumbersome. We could define additional combinators for common types of
@@ -685,13 +707,14 @@ The parser `label(msg)(p)` should behave like `p`. However, if `p`
 fails, then the error message contained in the error state produced by
 `p` should be replaced by `msg`.
 
-In addition, we add a second combinator that enables us to *tag* the
-error message of a subparser with additional information:
+In addition, we add a second combinator related to error reporting
+that enables us to *tag* the error message of a subparser with
+additional information:
 
 ```
 def tag[A](msg: String)(p: Parser[A]): Parser[A]
 ```
 
 The parser `tag(msg)(p)` should again behave like `p`. However, if `p`
-fails, then the error message in its final error state should be
+fails, then the error message in `p` final error state should be
 extended with `msg`.

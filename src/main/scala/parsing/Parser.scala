@@ -49,9 +49,9 @@ object Parser {
   implicit def regex(r: Regex): Parser[String] = ???
 
   def digit: Parser[Int] = "[0-9]".r map (_.toInt)
-  // def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toInt)
+  // def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toString.toInt)
   
-  def digits: Parser[Int] = repeat(digit) map (_ reduce (_ * 10 + _))
+  def digits: Parser[Int] = repeat(digit) map (ds => ds reduce (_ * 10 + _))
 }
 
 
