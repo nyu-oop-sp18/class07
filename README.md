@@ -95,8 +95,9 @@ sources such as strings, files, etc. Moreover, since we construct
 parsers compositionally from subparsers, a subparser must be able to
 start parsing *"in the middle"* of the input sequence. Thus, think of
 `Location` as abstracting both from the source of the input sequence
-as well as from the way we keep track of the position where the parser
-should start its parse within that input sequence.
+(a string, a file, a stream, etc.) as well as from the way we keep
+track of the position where the parser should start its parse within
+that input sequence.
 
 It will be your responsibility to design the representation of the
 type `Location` for different input sources. In the following we keep
@@ -685,9 +686,9 @@ error message that the parser could produce at this point could be
 
 However, this information alone is not very helpful. The parser could
 provide additional information about the context where the error
-occurred. In this case, the subparser that parses first character of
+occurred. In this case, the subparser that parses the first character of
 the identifier could be part of a composite parser for parsing an
-identifier. This composite parser could augment the information provided
+identifier. This composite parser could augment the error message provided
 by the subparser with the information
 
 ```" while parsing identifier"```
@@ -723,5 +724,5 @@ def tag[A](msg: String)(p: Parser[A]): Parser[A]
 ```
 
 The parser `tag(msg)(p)` should again behave like `p`. However, if `p`
-fails, then the error message in `p` final error state should be
+fails, then the error message in `p`'s final error state should be
 extended with `msg`.
