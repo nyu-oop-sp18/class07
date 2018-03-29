@@ -394,7 +394,7 @@ digit characters and returns the corresponding character upon
 success. We do this by reducing the `Seq[Char]` using a function that
 consecutively maps each `Char` in the sequence to a `Parser[Char]`
 (via an implicit conversion) and then combines it with its predecessor
-via the `orElse` combinator. Now we only need to convert the
+via the `orElse` combinator. Now we only need to convert the resulting
 `Parser[Char]` into a `Parser[Int]` using the `map` combinator. The
 function applied in the `map` takes the result `Char` produced by the
 `Parser[Char]` and converts it into the represented `Int` value. We do this
@@ -405,10 +405,10 @@ which is not what we want.
 The definition of `digits` is similar. The parser `repeat(digit)`
 accepts sequences of digit characters and produces a `List[Int]`
 corresponding to the `Int` values represented by each digit in the
-parsed sequence. By using the `map` combinator, the resulting parser
-is of type `Parser[List[Int]` which we convert to a `Parser[Int]` using
-`map`. The function applied in the `map` takes the `List[Int]`, `ds`,
-produced by the `Parser[List[Int]]`, and converts it into a single
+parsed sequence. The resulting parser is thus of type
+`Parser[List[Int]` and we convert to a `Parser[Int]` using `map`. The
+function applied in the `map` takes the `List[Int]`, `ds`, produced by
+the intermediate `Parser[List[Int]]`, and converts it into a single
 `Int` value according to its decimal representation encoded in `ds`.
 
 Writing parsers for basic regular expressions in this way is a bit
