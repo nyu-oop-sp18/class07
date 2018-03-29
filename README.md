@@ -508,7 +508,7 @@ indicating that it is backtrackable. In particular, we should have:
 (attempt('a' andThen 'b') orElse ('a' andThen 'a')).parse("aa").get === ('a', 'a')
 ```
 
-### The Combinator to Rule all Combinators: `flatMap`
+### One Combinator to Rule them all: `flatMap`
 
 Parsing regular languages (and more generally context-free languages)
 is fun, but what if we want to go beyond that? For instance, suppose
