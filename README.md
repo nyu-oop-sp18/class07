@@ -525,7 +525,7 @@ is fun, but what if we want to go beyond that? For instance, suppose
 we want to implement a parser for a context-sensitive language such as
 the one consisting of all character sequences of the form: *"a digit
 d, followed by a sequence of 'c's of length d"*. Example strings of
-this language are `1c` and `"3ccc"`. To implement a parser for such
+this language are `"1c"` and `"3ccc"`. To implement a parser for such
 languages, we need to be able to choose subparsers based on the
 intermediate results produced by other subparsers. This leads us to
 the final combinator that we add to our combinator algebra:
