@@ -706,7 +706,7 @@ this:
 To support this kind of error reporting functionality we add two more
 combinators to our library. The first one is
 
-```
+```scala
 def label[A](msg: String)(p: Parser[A]): Parser[A]
 ```
 
@@ -718,7 +718,7 @@ In addition, we add a second combinator related to error reporting
 that enables us to *tag* the error message of a subparser with
 additional information:
 
-```
+```scala
 def tag[A](msg: String)(p: Parser[A]): Parser[A]
 ```
 
