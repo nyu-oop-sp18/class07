@@ -144,7 +144,7 @@ t: Try[Int]
 ```
 Note that `1 / 0` throws an `ArithmeticException` due to the division
 by 0. However, this exception is caught by the `Try` constructor and
-contained with the value container `t`.
+contained within the resulting value `t`.
 
 The `Try` type is implemented by two case classes:
 
@@ -154,13 +154,13 @@ The `Try` type is implemented by two case classes:
 * `Failure`: which holds the exception otherwise.
 
 We can for instance now use pattern matching to inspect the outcome of
-the computation and extract the value or "release" the exception from
+the computation and extract the value, or "release" the exception from
 the `Try` container by throwing it:
 
 ```scala
 val x: Int = t match {
   case Success(x) => x
-  case Failure(ex) => throw x // Alternatively, return an Int to recover
+  case Failure(ex) => throw x // Alternatively, return an Int to recover from ex
 }
 ```
 
@@ -193,7 +193,7 @@ thrown. Instead, exceptions are simply propagated along the normal
 control flow of the program and can be dealt with at the point we deem
 it to be necessary. The `Try` type is thus useful when we want to
 write side-effect free code that needs to inter-operate with code that
-can throw exceptions. By using `Try` we can avoid cluttering our code
+can throw exceptions. By using `Try` we can then avoid cluttering our code
 with `try/catch` blocks.
 
 We modify the signature of `parse` to return a `Try[A]` instead of an
@@ -207,12 +207,16 @@ trait Parser[A] {
 }
 ```
 
-Upon calling `parse` the client is free to either
+If a client calls `parse` on a parser and the parser returns as
+`Failure` to indicate a parse error, the client is free to either
 
-1. throw the exception as a side-effect when calling `get` on the
-result of a failed `parse`, or
+1. try to recover from the error immediately (e.g. by providing a
+   default value of type `A` for a failed parse),
 
-1. delay the handling of the parse error and continue working with the
+1. throw the exception stored in the `Failure` immediately to escalate
+   the error, or
+
+1. delay the handling of the exception and continue working with the
 `Try[A]` in a side-effect free fashion (using `for` expressions as in
 our discussion above).
 
