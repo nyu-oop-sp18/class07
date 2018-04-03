@@ -394,7 +394,7 @@ value encoded in the decimal representation:
 
 ```scala
 def digit: Parser[Int] = ('0' to '9') reduce (_ orElse _) map (_.toString.toInt)
-def digits: Parser[Int] = repeat(digit) map (ds => ds reduce (_ * 10 + _))
+def digits: Parser[Int] = (digit andThen repeat(digit)) map { case (d, ds) => (d :: ds) reduce (_ * 10 + _) }
 ```
 
 It's instructive to go through these two definitions step by step. For
@@ -413,14 +413,17 @@ by converting the `Char` first to a `String` and then to an `Int`. If we
 call `toInt` directly on the `Char` value, we get back its ASCII code,
 which is not what we want.
 
-The definition of `digits` is similar. The parser `repeat(digit)`
-accepts sequences of digit characters and produces a `List[Int]`
-corresponding to the `Int` values represented by each digit in the
-parsed sequence. The resulting parser is thus of type
-`Parser[List[Int]]` and we convert to a `Parser[Int]` using `map`. The
-function applied in the `map` takes the `List[Int]`, `ds`, produced by
-the intermediate `Parser[List[Int]]`, and converts it into a single
-`Int` value according to its decimal representation encoded in `ds`.
+The definition of `digits` is similar. The parser `(digit andThen
+repeat(digit))` accepts non-empty sequences of digit characters and
+produces a `(Int, List[Int])` corresponding to the `Int` values
+represented by each digit in the parsed sequence. The first component
+is the first digit of the sequence, and the second component holds the
+list of the remaining digits. The resulting parser is thus of type
+`Parser[(Int, List[Int])]` and we convert to a `Parser[Int]` using
+`map`. The function applied in the `map` takes the pair `(d, ds):
+(Int, List[Int])`, produced by the intermediate `Parser[(Int, List[Int])]`,
+and converts it into a single `Int` value according to the decimal
+representation encoded in the list `d :: ds`.
 
 Writing parsers for basic regular expressions in this way is a bit
 cumbersome. We could define additional combinators for common types of
