@@ -556,7 +556,7 @@ Here is how we can use `flatMap` to implement a parser for the
 context-sensitive language that we described above:
 
 ```scala
-(digit flatMap (repeat(_)('a'))).parse("3aaa").get === List('a', 'a', 'a')
+(digit flatMap (repeatN(_)('a'))).parse("3aaa").get === List('a', 'a', 'a')
 ```
 
 Many of the combinators that we have discussed so far can be
